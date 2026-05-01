@@ -1582,23 +1582,6 @@
 <!-- ═══════════════════════════════════
      JAVASCRIPT
 ════════════════════════════════════ -->
-<script>
-const themeToggle = document.getElementById("themeToggle");
-const sunIcon = themeToggle.querySelector(".dark-icon");
-const moonIcon = themeToggle.querySelector(".light-icon");
-
-themeToggle.addEventListener("click", () => {
-    document.documentElement.classList.toggle("dark");
-
-    if (document.documentElement.classList.contains("dark")) {
-        sunIcon.style.display = "block";
-        moonIcon.style.display = "none";
-    } else {
-        sunIcon.style.display = "none";
-        moonIcon.style.display = "block";
-    }
-});
-</script>
 <!-- Small script to update the "last updated" date -->
 <script>
   (function() {
