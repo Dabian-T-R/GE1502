@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <base target="_self">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laser Chess/Maze | GE 1502 Engineering Design Portfolio</title>
+  <meta name="description" content="Engineering design portfolio for the Laser Chess/Maze project — a 2-player laser strategy game built for 5th graders at Melrose Leadership Academy.">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            laser: { red: '#ff3a3a', orange: '#ff8800' },
+            tech: {
+              blue: '#3b82f6', cyan: '#06b6d4', purple: '#8b5cf6',
+              green: '#10b981', pink: '#ec4899', orange: '#f59e0b', red: '#ef4444'
+            }
+          },
+          fontFamily: {
+            display: ['Inter', 'system-ui', 'sans-serif'],
+            mono:    ['JetBrains Mono', 'monospace'],
+            body:    ['Inter', 'system-ui', 'sans-serif'],
+            sans:    ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ─── DARK MODE TOKENS (default) ─── */
+    :root {
+      --clr-bg:        #08090f;
+      --clr-surface:   #0f1120;
+      --clr-border:    rgba(59,130,246,0.18);
+      --clr-accent:    #3b82f6;
+      --clr-accent2:   #8b5cf6;
+      --clr-laser:     #ff3a3a;
+      --clr-laser2:    #ff8800;
+      --clr-text:      #e2e8f0;
+      --clr-muted:     #94a3b8;
+      --clr-card-bg:   linear-gradient(145deg, rgba(15,17,32,0.9), rgba(8,9,15,0.95));
+      --clr-card-hover-shadow: rgba(59,130,246,0.2);
+      --clr-table-row-hover:   rgba(59,130,246,0.05);
+      --clr-th-bg:     rgba(59,130,246,0.12);
+      --clr-parts-th:  rgba(255,56,56,0.1);
+    }
+
+    /* ─── LIGHT MODE TOKENS ─── */
+    html:not(.dark) {
+      --clr-bg:        #f0f4ff;
+      --clr-surface:   #ffffff;
+      --clr-border:    rgba(59,130,246,0.22);
+      --clr-accent:    #2563eb;
+      --clr-accent2:   #7c3aed;
+      --clr-laser:     #dc2626;
+      --clr-laser2:    #d97706;
+      --clr-text:      #1e293b;
+      --clr-muted:     #475569;
+      --clr-card-bg:   linear-gradient(145deg, rgba(255,255,255,0.95), rgba(240,244,255,0.9));
+      --clr-card-hover-shadow: rgba(59,130,246,0.15);
+      --clr-table-row-hover:   rgba(59,130,246,0.04);
+      --clr-th-bg:     rgba(59,130,246,0.08);
+      --clr-parts-th:  rgba(220,38,38,0.07);
+    }
+
+    * { scroll-behavior: smooth; box-sizing: border-box; }
+
+    body {
+      background: var(--clr-bg);
+      color: var(--clr-text);
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+
+    #particles-js { position: absolute; inset: 0; z-index: 0; }
+
+    /* scanline only in dark mode */
+    .dark body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+    }
+
+    .laser-text {
+      background: linear-gradient(90deg, var(--clr-laser), var(--clr-laser2));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .gradient-text {
+      background: linear-gradient(90deg, var(--clr-accent), var(--clr-accent2));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    /* ─── GLASS CARD ─── */
+    .glass-card {
+      background: var(--clr-card-bg);
+      border: 1px solid var(--clr-border);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      position: relative; overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    .glass-card::before {
+      content: '';
+      position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.06), transparent);
+      transition: left 0.6s ease;
+    }
+    .glass-card:hover::before { left: 150%; }
+    .glass-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 60px -10px var(--clr-card-hover-shadow);
+      border-color: rgba(59,130,246,0.4);
+    }
+
+    /* Light mode card overrides */
+    html:not(.dark) .glass-card {
+      box-shadow: 0 2px 16px -4px rgba(59,130,246,0.08);
+    }
+    html:not(.dark) .glass-card:hover {
+      box-shadow: 0 20px 60px -10px rgba(59,130,246,0.15);
+    }
+
+    .laser-line {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--clr-laser), transparent);
+      box-shadow: 0 0 8px var(--clr-laser), 0 0 20px rgba(255,56,56,0.3);
+    }
+
+    /* grid bg adapts to theme */
+    .grid-bg {
+      background-image:
+        linear-gradient(var(--clr-border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--clr-border) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    nav { border-bottom: 1px solid var(--clr-border); backdrop-filter: blur(20px); }
+
+    /* nav background per theme */
+    .dark header { background: rgba(8,9,15,0.85); }
+    html:not(.dark) header { background: rgba(240,244,255,0.9); }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.25em;
+      color: var(--clr-accent); text-transform: uppercase;
+    }
+
+    .timeline-line {
+      position: absolute; left: 20px; top: 0; bottom: 0; width: 2px;
+      background: linear-gradient(to bottom, var(--clr-accent), var(--clr-accent2));
+    }
+    .timeline-dot {
+      position: absolute; left: 12px; width: 18px; height: 18px;
+      border-radius: 50%; border: 2px solid var(--clr-accent);
+      background: var(--clr-bg);
+      box-shadow: 0 0 12px var(--clr-accent);
+      top: 20px;
+    }
+
+    .tag {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.05em;
+      border: 1px solid;
+    }
+
+    .stat-val { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700; }
+
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    .float-1 { animation: float 5s ease-in-out infinite; }
+    .float-2 { animation: float 6s ease-in-out 0.8s infinite; }
+    .float-3 { animation: float 4.5s ease-in-out 1.5s infinite; }
+
+    @keyframes beam-move {
+      0% { transform: scaleX(0) translateX(-100%); opacity: 0; }
+      30% { opacity: 1; }
+      100% { transform: scaleX(1) translateX(0); opacity: 0.6; }
+    }
+    .beam-anim { animation: beam-move 2.5s ease-out infinite; transform-origin: left; }
+
+    @keyframes pulse-glow {
+      0%,100% { box-shadow: 0 0 8px var(--clr-laser); }
+      50% { box-shadow: 0 0 25px var(--clr-laser), 0 0 50px rgba(255,56,56,0.2); }
+    }
+    .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--clr-bg); }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(var(--clr-accent), var(--clr-accent2)); border-radius: 4px; }
+
+    .img-hover { transition: transform 0.4s ease; cursor: pointer; }
+    .img-hover:hover { transform: scale(1.05); }
+
+    #imgModal {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.92); align-items: center; justify-content: center;
+    }
+    #imgModal.open { display: flex; }
+    #imgModal img { max-height: 90vh; max-width: 90vw; border-radius: 12px; border: 1px solid var(--clr-border); }
+
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid var(--clr-border); padding: 8px 12px; text-align: center; font-size: 0.85rem; }
+    th { background: var(--clr-th-bg); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; letter-spacing: 0.05em; }
+    tr:hover td { background: var(--clr-table-row-hover); }
+    .parts-table th { background: var(--clr-parts-th); }
+
+    /* ─── Light mode text overrides ─── */
+    html:not(.dark) .text-slate-300  { color: #334155 !important; }
+    html:not(.dark) .text-slate-400  { color: #475569 !important; }
+    html:not(.dark) .text-slate-500  { color: #64748b !important; }
+    html:not(.dark) .text-slate-600  { color: #475569 !important; }
+    html:not(.dark) .text-white      { color: #0f172a !important; }
+    html:not(.dark) .text-red-400    { color: #dc2626 !important; }
+    html:not(.dark) .text-blue-400   { color: #2563eb !important; }
+    html:not(.dark) .text-purple-400 { color: #7c3aed !important; }
+    html:not(.dark) .text-green-400  { color: #059669 !important; }
+    html:not(.dark) .text-orange-400 { color: #d97706 !important; }
+    html:not(.dark) .text-pink-400   { color: #db2777 !important; }
+    html:not(.dark) .text-yellow-400 { color: #b45309 !important; }
+
+    /* section backgrounds in light mode */
+    html:not(.dark) [style*="background:var(--clr-surface)"],
+    html:not(.dark) [style*="background: var(--clr-surface)"] {
+      background: #ffffff !important;
+    }
+    html:not(.dark) [style*="background:#060810"] {
+      background: #1e293b !important;
+    }
+
+    /* Inline dark bg blocks (code/mono boxes) */
+    html:not(.dark) .rounded-xl.overflow-hidden[style*="#060810"],
+    html:not(.dark) [style*="background:#060810"] {
+      background: #f1f5f9 !important;
+    }
+
+    /* quote card in light mode */
+    html:not(.dark) .quote-card {
+      background: rgba(220,38,38,0.04);
+      border-left-color: var(--clr-laser);
+    }
+
+    /* hero text */
+    html:not(.dark) .hero-white { color: #0f172a !important; }
+
+    /* ─── THEME TOGGLE BUTTON ─── */
+    #themeToggle {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      z-index: 9999;
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--clr-accent), var(--clr-accent2));
+      box-shadow: 0 4px 20px rgba(59,130,246,0.4);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    #themeToggle:hover {
+      transform: scale(1.1) rotate(15deg);
+      box-shadow: 0 6px 28px rgba(59,130,246,0.6);
+    }
+    #themeToggle i { color: #fff; font-size: 1.1rem; }
+
+    .quote-card {
+      border-left: 3px solid var(--clr-laser);
+      background: rgba(255,56,56,0.05);
+      border-radius: 0 12px 12px 0;
+      padding: 16px 20px;
+      font-style: italic;
+    }
+
+    /* Additional styles for photo galleries */
+    .photo-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .photo-card {
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--clr-border);
+      transition: all 0.2s ease;
+    }
+    .photo-card:hover {
+      border-color: var(--clr-accent);
+      transform: translateY(-4px);
+    }
+    .photo-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════════════════
+     COMBINED THEME TOGGLE
+══════════════════════════════════════════ -->
+<button 
+    id="themeToggle"
+    aria-label="Toggle light/dark mode"
+    class="fixed top-6 right-6 z-50 w-14 h-14 rounded-full 
+           bg-gradient-to-br from-tech-blue to-tech-purple 
+           shadow-2xl flex items-center justify-center 
+           transition-all duration-300 hover:scale-110 group overflow-hidden"
+>
+    <!-- Sun Icon (shown in dark mode) -->
+    <i class="fas fa-sun dark-icon text-white text-xl dark:block"></i>
+
+    <!-- Moon Icon (shown in light mode) -->
+    <i class="fas fa-moon light-icon text-white text-xl hidden dark:block"></i>
+
+    <!-- Glow Effect -->
+    <div class="absolute inset-0 rounded-full 
+                bg-gradient-to-br from-tech-blue to-tech-purple 
+                opacity-0 group-hover:opacity-100 
+                blur-md transition-opacity duration-300">
+    </div>
+</button>
+
+<!-- ════════ NAV ════════ -->
+<header class="sticky top-0 z-40" style="border-bottom:1px solid var(--clr-border)">
+  <nav class="container mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#ff3a3a,#ff8800)">
+        <i class="fas fa-crosshairs text-white text-sm"></i>
+      </div>
+      <div>
+                        <a href="https://dabian-t-r.github.io/Portfolio.Main/" 
+                        class="text-2xl font-black text-gray-800 dark:text-white hover:text-tech-blue dark:hover:text-tech-blue transition-colors">
+                            Engineering
+                        </a>
+                        <a href="https://dabian-t-r.github.io/Portfolio.Main/"
+                        class="text-2xl font-black gradient-text">
+                            Portfolio
+                        </a>
+                    </div>
+    </div>
+    <div class="hidden md:flex gap-6 flex-wrap pr-14">
+      <a href="#overview"         class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Overview</a>
+      <a href="#research"         class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Research</a>
+      <a href="#ideation"         class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Ideation</a>
+      <a href="#prototype"        class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Prototype</a>
+      <a href="#cad"              class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">CAD</a>
+      <a href="#electronics"      class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Electronics</a>
+      <a href="#final"            class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Final</a>
+      <a href="#results"          class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Results</a>
+      <a href="#discussion"       class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Discussion</a>
+      <a href="#recommendations"  class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Recommendations</a>
+      <a href="#photogallery"     class="text-sm font-semibold transition-colors" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-text')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')">Gallery</a>
+    </div>
+    <button class="md:hidden text-xl pr-14" style="color:var(--clr-muted)" onclick="document.getElementById('mobileNav').classList.toggle('hidden')">
+      <i class="fas fa-bars"></i>
+    </button>
+  </nav>
+  <div id="mobileNav" class="hidden px-6 pb-4 flex flex-col gap-3 text-sm font-semibold" style="color:var(--clr-muted)">
+    <a href="#overview"        class="hover:text-blue-500">Overview</a>
+    <a href="#research"        class="hover:text-blue-500">Research</a>
+    <a href="#ideation"        class="hover:text-blue-500">Ideation</a>
+    <a href="#prototype"       class="hover:text-blue-500">Prototype</a>
+    <a href="#cad"             class="hover:text-blue-500">CAD</a>
+    <a href="#electronics"     class="hover:text-blue-500">Electronics</a>
+    <a href="#final"           class="hover:text-blue-500">Final</a>
+    <a href="#results"         class="hover:text-blue-500">Results</a>
+    <a href="#discussion"      class="hover:text-blue-500">Discussion</a>
+    <a href="#recommendations" class="hover:text-blue-500">Recommendations</a>
+    <a href="#photogallery"    class="hover:text-blue-500">Gallery</a>
+  </div>
+</header>
+
+<!-- ════════ HERO ════════ -->
+<section id="home" class="relative min-h-screen flex items-center justify-center overflow-hidden grid-bg">
+  <div id="particles-js" class="absolute inset-0 z-0"></div>
+
+  <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="beam-anim absolute" style="top:28%;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#ff3a3a,transparent);opacity:0.4;box-shadow:0 0 10px #ff3a3a;"></div>
+    <div class="beam-anim absolute" style="top:60%;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#3b82f6,transparent);opacity:0.3;box-shadow:0 0 10px #3b82f6;animation-delay:1.2s;"></div>
+    <div class="beam-anim absolute" style="top:72%;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#ff8800,transparent);opacity:0.25;box-shadow:0 0 10px #ff8800;animation-delay:2.1s;"></div>
+  </div>
+
+  <div class="relative z-10 text-center px-6 max-w-5xl mx-auto py-20">
+    <div class="section-label mb-4">GE 1502 · Cornerstone 2 · Engineering Design Portfolio</div>
+
+    <h1 class="font-display font-black leading-none mb-4" style="letter-spacing:-0.02em">
+      <span class="block text-5xl md:text-8xl" style="color:var(--clr-text)">LASER</span>
+      <span class="block laser-text text-5xl md:text-8xl">CHESS / MAZE</span>
+    </h1>
+
+    <div class="laser-line my-6 mx-auto w-64"></div>
+
+    <p class="text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-light" style="color:var(--clr-muted)">
+      A 2-player laser strategy board game designed for 5th graders at Melrose Leadership Academy — combining optics, spatial reasoning, and STEM education.
+    </p>
+
+    <div class="mb-10">
+      <p class="section-label mb-4">Team Members</p>
+      <div class="flex flex-wrap justify-center gap-3">
+        <span class="tag" style="border-color:rgba(59,130,246,0.4);color:#2563eb;background:rgba(59,130,246,0.08)">Dabian Taborda Restrepo</span>
+        <span class="tag" style="border-color:rgba(139,92,246,0.4);color:#7c3aed;background:rgba(139,92,246,0.08)">Jake Dimov</span>
+        <span class="tag" style="border-color:rgba(16,185,129,0.4);color:#059669;background:rgba(16,185,129,0.08)">Kyle Morley</span>
+        <span class="tag" style="border-color:rgba(245,158,11,0.4);color:#d97706;background:rgba(245,158,11,0.08)">Micah Fernandez</span>
+        <span class="tag" style="border-color:rgba(236,72,153,0.4);color:#db2777;background:rgba(236,72,153,0.08)">Owen Chickering</span>
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-10 mt-8">
+      <div class="float-1 opacity-70" style="color:var(--clr-laser)"><i class="fas fa-crosshairs text-4xl"></i></div>
+      <div class="float-2 opacity-70" style="color:var(--clr-accent)"><i class="fas fa-chess-board text-4xl"></i></div>
+      <div class="float-3 opacity-70" style="color:var(--clr-accent2)"><i class="fas fa-microchip text-4xl"></i></div>
+    </div>
+
+    <a href="#overview" class="inline-block mt-10 px-8 py-4 rounded-xl font-display font-bold text-white tracking-wide transition-all hover:scale-105"
+      style="background:linear-gradient(135deg,#ff3a3a,#ff8800);box-shadow:0 0 30px rgba(255,56,56,0.3)">
+      Explore the Project <i class="fas fa-arrow-down ml-2 animate-bounce"></i>
+    </a>
+  </div>
+</section>
+
+<!-- ════════ OVERVIEW ════════ -->
+<section id="overview" class="py-24 relative" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">01 — Project Overview</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Problem Statement</h2>
+    </div>
+
+    <div class="glass-card p-8 mb-8">
+      <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-file-alt" style="color:var(--clr-accent)"></i> Abstract
+      </h3>
+      <p class="leading-relaxed mb-3" style="color:var(--clr-text)">
+        Our team designed and built a laser-based STEM board game for fifth-grade students at Melrose Leadership Academy. We started by talking with students and figuring out what actually keeps them interested in class — they liked hands-on activities more than passive learning, competition, movement, and games that felt fun right away. They also wanted something that could be explained fast and played within a normal class period.
+      </p>
+      <p class="leading-relaxed text-sm" style="color:var(--clr-muted)">
+        The final design is a laser-based game built around a board, removable pieces, mirrors, blockers, a laser emitter, a receiver, and RP2040-based electronics. Getting there took sketches, concept discussions, early prototypes, CAD work, electronics integration, testing, and redesign — including a late-stage board warp that forced a design change. The final prototype demonstrates a real, interactive STEM game reflecting student feedback, real engineering constraints, and repeated problem-solving.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 mb-12">
+      <div class="glass-card p-8">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:linear-gradient(135deg,#ff3a3a,#ff8800)">
+            <i class="fas fa-exclamation-triangle text-white text-sm"></i>
+          </div>
+          <h3 class="font-display font-bold text-xl" style="color:var(--clr-text)">The Challenge</h3>
+        </div>
+        <p class="leading-relaxed mb-5" style="color:var(--clr-text)">
+          Fifth-grade students at Melrose Leadership Academy need inclusive, engaging STEM games that provide meaningful early exposure to STEM concepts while supporting participation from all children — regardless of ability, gender, or language background.
+        </p>
+        <p class="leading-relaxed text-sm" style="color:var(--clr-muted)">
+          Many existing STEM games are insufficiently aligned with California Common Core standards and fail to address gender disparities in STEM identity development. The challenge was to design an interactive game that is developmentally appropriate, curriculum-aligned, and intentionally inclusive.
+        </p>
+      </div>
+
+      <div class="glass-card p-8">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">
+            <i class="fas fa-lightbulb text-white text-sm"></i>
+          </div>
+          <h3 class="font-display font-bold text-xl" style="color:var(--clr-text)">The Solution — Laser Grid</h3>
+        </div>
+        <p class="leading-relaxed mb-5" style="color:var(--clr-text)">
+          A tabletop laser-puzzle game (DOM-K) on a 6×6 grid with interchangeable physical pieces and an electronics system that detects piece placement, controls a laser emitter, and registers beam hits. Supports single-player puzzle mode (challenge cards) and two-player competitive mode.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="tag" style="border-color:rgba(220,38,38,0.35);color:#dc2626">Laser Diodes</span>
+          <span class="tag" style="border-color:rgba(37,99,235,0.35);color:#2563eb">Reed Switches</span>
+          <span class="tag" style="border-color:rgba(124,58,237,0.35);color:#7c3aed">RP2040 Pico</span>
+          <span class="tag" style="border-color:rgba(5,150,105,0.35);color:#059669">LCD Display</span>
+          <span class="tag" style="border-color:rgba(217,119,6,0.35);color:#d97706">3D Printed Parts</span>
+          <span class="tag" style="border-color:rgba(219,39,119,0.35);color:#db2777">Laser-Cut Wood</span>
+          <span class="tag" style="border-color:rgba(220,38,38,0.35);color:#dc2626">RF Wireless</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-bullseye" style="color:var(--clr-laser)"></i> Design Objectives &amp; Constraints
+      </h3>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div>
+          <h4 class="font-display font-semibold mb-3" style="color:var(--clr-accent)">Must Haves</h4>
+          <ul class="space-y-2 text-sm" style="color:var(--clr-text)">
+            <li class="flex items-start gap-2"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i>Needs-based design for MLA 5th graders</li>
+            <li class="flex items-start gap-2"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i>Aligned with CA Common Core standards</li>
+            <li class="flex items-start gap-2"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i>4–5 electronic components from Pico kit</li>
+            <li class="flex items-start gap-2"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i>Microcontroller (RP2040) integration</li>
+            <li class="flex items-start gap-2"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i>Inclusive for all abilities &amp; genders</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-semibold mb-3" style="color:var(--clr-accent2)">STEM Integration</h4>
+          <ul class="space-y-2 text-sm" style="color:var(--clr-text)">
+            <li class="flex items-start gap-2"><i class="fas fa-atom mt-0.5 flex-shrink-0" style="color:var(--clr-accent2)"></i>Optics &amp; reflection angles (Science)</li>
+            <li class="flex items-start gap-2"><i class="fas fa-calculator mt-0.5 flex-shrink-0" style="color:var(--clr-accent2)"></i>Grid coordinates &amp; geometry (Math)</li>
+            <li class="flex items-start gap-2"><i class="fas fa-cogs mt-0.5 flex-shrink-0" style="color:var(--clr-accent2)"></i>Circuit design &amp; electronics (Engineering)</li>
+            <li class="flex items-start gap-2"><i class="fas fa-code mt-0.5 flex-shrink-0" style="color:var(--clr-accent2)"></i>Microcontroller programming (Technology)</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-semibold mb-3" style="color:#d97706">Bonus Goals</h4>
+          <ul class="space-y-2 text-sm" style="color:var(--clr-text)">
+            <li class="flex items-start gap-2"><i class="fas fa-star mt-0.5 flex-shrink-0" style="color:#d97706"></i>Automatic game reset (+5 pts)</li>
+            <li class="flex items-start gap-2"><i class="fas fa-star mt-0.5 flex-shrink-0" style="color:#d97706"></i>Universal Design principles</li>
+            <li class="flex items-start gap-2"><i class="fas fa-star mt-0.5 flex-shrink-0" style="color:#d97706"></i>Unique electronic component (+5 pts)</li>
+            <li class="flex items-start gap-2"><i class="fas fa-compress-alt mt-0.5 flex-shrink-0" style="color:#d97706"></i>Reduced size for portability</li>
+            <li class="flex items-start gap-2"><i class="fas fa-eye mt-0.5 flex-shrink-0" style="color:#d97706"></i>Concealed wiring &amp; polished aesthetics</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ RESEARCH ════════ -->
+<section id="research" class="py-24 relative grid-bg">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">02 — Market Research</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Existing Solutions</h2>
+      <p class="mt-3 max-w-xl mx-auto" style="color:var(--clr-muted)">Each team member researched 3 existing products to inform our design direction.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Research cards -->
+      <div class="glass-card p-6">
+        <div class="w-12 h-12 rounded-xl mb-4 flex items-center justify-center" style="background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.3)">
+          <i class="fas fa-crosshairs text-2xl" style="color:var(--clr-laser)"></i>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2" style="color:var(--clr-text)">ThinkFun Laser Maze</h3>
+        <p class="text-sm leading-relaxed mb-3" style="color:var(--clr-muted)">Logic puzzle game where players arrange mirrors and blockers on challenge cards to direct a laser beam to specific targets. STEM-focused with progressive difficulty.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="tag" style="border-color:rgba(220,38,38,0.3);color:#dc2626;font-size:0.6rem">mirrors</span>
+          <span class="tag" style="border-color:rgba(220,38,38,0.3);color:#dc2626;font-size:0.6rem">laser pointer</span>
+          <span class="tag" style="border-color:rgba(220,38,38,0.3);color:#dc2626;font-size:0.6rem">plastic base</span>
+          <span class="tag" style="border-color:rgba(220,38,38,0.3);color:#dc2626;font-size:0.6rem">light sensor</span>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="w-12 h-12 rounded-xl mb-4 flex items-center justify-center" style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3)">
+          <i class="fas fa-chess text-2xl" style="color:var(--clr-accent2)"></i>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2" style="color:var(--clr-text)">Khet Laser Game 2.0</h3>
+        <p class="text-sm leading-relaxed mb-3" style="color:var(--clr-muted)">Strategic board game blending chess-like movement with laser mechanics. Players move mirrored pieces and fire a laser to eliminate opponents based on reflection angles.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="tag" style="border-color:rgba(124,58,237,0.3);color:#7c3aed;font-size:0.6rem">mirrors</span>
+          <span class="tag" style="border-color:rgba(124,58,237,0.3);color:#7c3aed;font-size:0.6rem">laser pointer</span>
+          <span class="tag" style="border-color:rgba(124,58,237,0.3);color:#7c3aed;font-size:0.6rem">light sensor</span>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="w-12 h-12 rounded-xl mb-4 flex items-center justify-center" style="background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3)">
+          <i class="fas fa-puzzle-piece text-2xl" style="color:var(--clr-accent)"></i>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2" style="color:var(--clr-text)">Laser Maze STEM</h3>
+        <p class="text-sm leading-relaxed mb-3" style="color:var(--clr-muted)">Classroom-oriented version emphasizing optics concepts — reflection angles, beam paths. Integrates physics learning with logical challenge progression for ages 8+.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="tag" style="border-color:rgba(37,99,235,0.3);color:#2563eb;font-size:0.6rem">cubes</span>
+          <span class="tag" style="border-color:rgba(37,99,235,0.3);color:#2563eb;font-size:0.6rem">mirrors</span>
+          <span class="tag" style="border-color:rgba(37,99,235,0.3);color:#2563eb;font-size:0.6rem">plastic base</span>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="w-12 h-12 rounded-xl mb-4 flex items-center justify-center" style="background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.3)">
+          <i class="fas fa-bolt text-2xl" style="color:#059669"></i>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2" style="color:var(--clr-text)">Snap Circuits</h3>
+        <p class="text-sm leading-relaxed mb-3" style="color:var(--clr-muted)">Educational electronics kit with snap-together components on a plastic grid. Introduces current flow, switches, motors, and sound modules hands-on.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="tag" style="border-color:rgba(5,150,105,0.3);color:#059669;font-size:0.6rem">copper</span>
+          <span class="tag" style="border-color:rgba(5,150,105,0.3);color:#059669;font-size:0.6rem">battery</span>
+          <span class="tag" style="border-color:rgba(5,150,105,0.3);color:#059669;font-size:0.6rem">misc electrical</span>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="w-12 h-12 rounded-xl mb-4 flex items-center justify-center" style="background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3)">
+          <i class="fas fa-hospital text-2xl" style="color:#d97706"></i>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2" style="color:var(--clr-text)">Operation Board Game</h3>
+        <p class="text-sm leading-relaxed mb-3" style="color:var(--clr-muted)">Skill-based game using tweezers to remove plastic pieces without touching edges. Buzzer sounds and nose lights signal mistakes. Tests precision and steady hands.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="tag" style="border-color:rgba(217,119,6,0.3);color:#d97706;font-size:0.6rem">buzzer</span>
+          <span class="tag" style="border-color:rgba(217,119,6,0.3);color:#d97706;font-size:0.6rem">light</span>
+          <span class="tag" style="border-color:rgba(217,119,6,0.3);color:#d97706;font-size:0.6rem">plastic parts</span>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="w-12 h-12 rounded-xl mb-4 flex items-center justify-center" style="background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.3)">
+          <i class="fas fa-cube text-2xl" style="color:#db2777"></i>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2" style="color:var(--clr-text)">Blokus Strategy Game</h3>
+        <p class="text-sm leading-relaxed mb-3" style="color:var(--clr-muted)">Strategic board game where players place polyomino pieces on a grid to maximize coverage and block opponents. Builds spatial awareness and tactical thinking.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="tag" style="border-color:rgba(219,39,119,0.3);color:#db2777;font-size:0.6rem">plastic pieces</span>
+          <span class="tag" style="border-color:rgba(219,39,119,0.3);color:#db2777;font-size:0.6rem">grid board</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8 mt-8">
+      <div class="flex items-start gap-4">
+        <i class="fas fa-quote-left text-3xl flex-shrink-0 mt-1" style="color:var(--clr-laser)"></i>
+        <div>
+          <p class="text-lg leading-relaxed italic" style="color:var(--clr-text)">
+            "Existing laser games inspire the core mechanic, but none combine a digital microcontroller, physical game pieces, and inclusive educational goals in one package. That gap is exactly where our design lives."
+          </p>
+          <p class="text-sm mt-2" style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">— Team 6 Research Synthesis</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ IDEATION ════════ -->
+<section id="ideation" class="py-24" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">03 — Ideation</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Concept Generation</h2>
+      <p class="mt-3 max-w-xl mx-auto" style="color:var(--clr-muted)">Each team member generated 3+ original ideas using Morphological Charts and Design Heuristic Cards.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-12">
+      <div class="glass-card p-6">
+        <div class="section-label mb-3" style="color:var(--clr-accent)">Dabian Taborda Restrepo</div>
+        <div class="space-y-4">
+          <div class="p-4 rounded-lg" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">Laser Mirror Maze</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">A 20×12" board with mirror blocks and laser; screen + 6 buttons for Q&A answers. Integrated candy reward hopper with dispense motor on win.</p>
+          </div>
+          <div class="p-4 rounded-lg" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">Mirror Block Design</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">Different cube layouts featuring angled mirrors. "Answer cut" at the top enables light-based answer selection mechanics.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="section-label mb-3" style="color:var(--clr-accent2)">Jake Dimov</div>
+        <div class="space-y-4">
+          <div class="p-4 rounded-lg" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">Hit the Target</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">1v1 battle board with laser source, photo-electric target, and rotating mirror reflectors. Square pegs keep pieces from rotating unintentionally.</p>
+          </div>
+          <div class="p-4 rounded-lg" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">Multi-color Laser Strategy</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">R/G/B laser sources, prism pieces that split/combine colors, color filter targets, and reflectors with rotating knobs on all 4 sides of the board.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="section-label mb-3" style="color:#059669">Micah Fernandez</div>
+        <div class="space-y-4">
+          <div class="p-4 rounded-lg" style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">Spy Academy Challenge Kit</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">Modular tabletop laser maze with 3-strike system and adjustable difficulty using lasers and beams. Features LED display, buzzer, servo, and Arduino UNO.</p>
+          </div>
+          <div class="p-4 rounded-lg" style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">Cybersecurity Pro</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">Standing frame maze with servo-driven moving beams and adaptive difficulty. ESP32 microcontroller with Bluetooth, 4 servo motors, and OLED display.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="section-label mb-3" style="color:#d97706">Owen / Kyle</div>
+        <div class="space-y-4">
+          <div class="p-4 rounded-lg" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">2-Player Laser Strategy</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">20×20" peg board with 2 laser emitters, 2 photoelectric sensors, LCD screen, and mirror pieces. First to hit opponent's sensor wins — LCD declares winner.</p>
+          </div>
+          <div class="p-4 rounded-lg" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+            <h4 class="font-display font-semibold mb-1" style="color:var(--clr-text)">Laser Block Source</h4>
+            <p class="text-sm" style="color:var(--clr-muted)">1×1×1" cube with brass power pins connecting to board surface traces, built-in resistor for current limiting, and ~5mW red diode laser module.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6" style="color:var(--clr-text)">Design Decision Matrix (KTDA)</h3>
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th class="text-left">Design Concept</th>
+              <th>Safety 30%</th>
+              <th>Usability 18%</th>
+              <th>Aesthetics 10%</th>
+              <th>Noise 7%</th>
+              <th>Durability 20%</th>
+              <th>Inclusivity 15%</th>
+              <th style="color:#d97706">Weighted Sum</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="text-left" style="color:var(--clr-text)">Laser Maze Puzzle</td><td>3</td><td>5</td><td>4</td><td>0</td><td>4</td><td>5</td><td style="color:#d97706;font-family:'JetBrains Mono',monospace">5.75</td></tr>
+            <tr style="background:rgba(220,38,38,0.04)">
+              <td class="text-left font-semibold" style="color:#dc2626">Hit the Target</td>
+              <td style="color:#dc2626">4</td><td style="color:#dc2626">5</td><td style="color:#dc2626">4</td><td style="color:#dc2626">0</td><td style="color:#dc2626">4</td><td style="color:#dc2626">5</td>
+              <td style="color:#dc2626;font-family:'JetBrains Mono',monospace;font-weight:700">6.05</td>
+            </tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Spy Academy Kit</td><td>3</td><td>5</td><td>4</td><td>3</td><td>2</td><td>4</td><td style="color:#d97706;font-family:'JetBrains Mono',monospace">4.80</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Mission Briefcase</td><td>3</td><td>4</td><td>4</td><td>3</td><td>2</td><td>4</td><td style="color:#d97706;font-family:'JetBrains Mono',monospace">4.62</td></tr>
+            <tr style="background:rgba(220,38,38,0.04)">
+              <td class="text-left font-semibold" style="color:#dc2626">★ Laser Strategy Game</td>
+              <td style="color:#dc2626">4</td><td style="color:#dc2626">5</td><td style="color:#dc2626">4</td><td style="color:#dc2626">0</td><td style="color:#dc2626">4</td><td style="color:#dc2626">5</td>
+              <td style="color:#dc2626;font-family:'JetBrains Mono',monospace;font-weight:700">6.05</td>
+            </tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Multiple Choice Quiz</td><td>4</td><td>5</td><td>4</td><td>0</td><td>3</td><td>4</td><td style="color:#d97706;font-family:'JetBrains Mono',monospace">5.20</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-sm mt-4 italic" style="color:var(--clr-muted)">
+        Tie between "Hit the Target" and "Laser Strategy Game" — majority vote selected the <span style="color:#dc2626;font-weight:600">2-player Laser Strategy game</span> as the final direction.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ PROTOTYPE ════════ -->
+<section id="prototype" class="py-24 relative grid-bg">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">04 — Physical Prototyping</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Cardboard &amp; 50% Prototype</h2>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 mb-12">
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-box" style="color:#d97706"></i> Full-Scale Cardboard Model
+        </h3>
+        <p class="leading-relaxed mb-5" style="color:var(--clr-text)">
+          Using cardboard, paper, and recyclable materials, the team built a full-scale model featuring a 10×10 grid board with cutouts for piece placement, placeholder buttons, and a front-facing LCD window. Blue tape secured edges during rapid iteration.
+        </p>
+        <div class="laser-line mb-5"></div>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3 text-sm" style="color:var(--clr-text)"><i class="fas fa-check" style="color:#059669"></i>Grid spacing validated for 1"×1" block pieces</div>
+          <div class="flex items-center gap-3 text-sm" style="color:var(--clr-text)"><i class="fas fa-check" style="color:#059669"></i>Front-face LCD window and button positions marked</div>
+          <div class="flex items-center gap-3 text-sm" style="color:var(--clr-text)"><i class="fas fa-times" style="color:#dc2626"></i>10×10 grid deemed too large → reduced to 6×6</div>
+          <div class="flex items-center gap-3 text-sm" style="color:var(--clr-text)"><i class="fas fa-times" style="color:#dc2626"></i>Portability issue identified — size reduction needed</div>
+        </div>
+      </div>
+
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-print" style="color:var(--clr-accent)"></i> Physical Board — Final Construction
+        </h3>
+        <p class="leading-relaxed mb-5" style="color:var(--clr-text)">
+          The playing surface is a flat 6×6 grid of square cells. The base is a three-layer system: a thick plywood base (chosen for straightness) with embedded magnets, a laser-cut wood grid drilled onto the base, and a thin painted plywood top serving as the decorative playing surface. The board itself has no exposed electronics.
+        </p>
+        <div class="laser-line mb-5"></div>
+        <div class="space-y-2 text-sm" style="color:var(--clr-text)">
+          <div class="flex items-center gap-3"><i class="fas fa-check" style="color:#059669"></i>3-layer plywood system solved board warping issues</div>
+          <div class="flex items-center gap-3"><i class="fas fa-check" style="color:#059669"></i>Laser-cut wood grid drilled to base</div>
+          <div class="flex items-center gap-3"><i class="fas fa-check" style="color:#059669"></i>Board dimensions: 12×12×1.36 inches</div>
+          <div class="flex items-center gap-3"><i class="fas fa-check" style="color:#059669"></i>No exposed electronics on playing surface</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8 mb-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-th" style="color:var(--clr-accent2)"></i> Six Game Piece Types
+      </h3>
+      <p class="text-sm mb-6" style="color:var(--clr-muted)">Each piece is sized to fit within a single 6×6 grid cell. Embedded board magnets interact with reed switches inside the laser and king pieces.</p>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="p-5 rounded-xl" style="background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.2)">
+          <div class="flex items-center gap-3 mb-3">
+            <i class="fas fa-dot-circle text-xl" style="color:#dc2626"></i>
+            <h4 class="font-display font-bold" style="color:var(--clr-text)">Laser Piece</h4>
+          </div>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">The beam source. Contains a laser diode, a battery, and a reed switch. Placing it on a grid cell closes the reed switch via the board's embedded magnet, powering the diode.</p>
+        </div>
+        <div class="p-5 rounded-xl" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)">
+          <div class="flex items-center gap-3 mb-3">
+            <i class="fas fa-crown text-xl" style="color:#059669"></i>
+            <h4 class="font-display font-bold" style="color:var(--clr-text)">King Piece</h4>
+          </div>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">The target. A photoreceptor on the front face detects incident laser light. An onboard RF transmitter sends a hit signal to the external electronics unit.</p>
+        </div>
+        <div class="p-5 rounded-xl" style="background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.2)">
+          <div class="flex items-center gap-3 mb-3">
+            <i class="fas fa-chevron-right text-xl" style="color:#2563eb;transform:rotate(-45deg)"></i>
+            <h4 class="font-display font-bold" style="color:var(--clr-text)">Deflector Piece</h4>
+          </div>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">A one-sided 45° mirror on a square base. Redirects an incident beam by 90°. The reflective side is marked visually on top; the opposite side absorbs the beam.</p>
+        </div>
+        <div class="p-5 rounded-xl" style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.2)">
+          <div class="flex items-center gap-3 mb-3">
+            <i class="fas fa-compress-arrows-alt text-xl" style="color:#7c3aed"></i>
+            <h4 class="font-display font-bold" style="color:var(--clr-text)">Diagonal Piece</h4>
+          </div>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">A 22.5° mirror on a square base. Redirects an incident beam by 45°, converting a cardinal-direction beam into a diagonal beam (or vice versa).</p>
+        </div>
+        <div class="p-5 rounded-xl" style="background:rgba(217,119,6,0.06);border:1px solid rgba(217,119,6,0.2)">
+          <div class="flex items-center gap-3 mb-3">
+            <i class="fas fa-shield-alt text-xl" style="color:#d97706"></i>
+            <h4 class="font-display font-bold" style="color:var(--clr-text)">Shield Piece</h4>
+          </div>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">An opaque block that absorbs the laser beam on all four faces. It does not deflect or transmit light in any direction.</p>
+        </div>
+        <div class="p-5 rounded-xl" style="background:rgba(219,39,119,0.06);border:1px solid rgba(219,39,119,0.2)">
+          <div class="flex items-center gap-3 mb-3">
+            <i class="fas fa-minus text-xl" style="color:#db2777"></i>
+            <h4 class="font-display font-bold" style="color:var(--clr-text)">Barricade Piece</h4>
+          </div>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">A low-profile square that sits flush to the board surface. Short enough that a laser beam travels over it unobstructed, but blocks other pieces from that cell.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-magnet" style="color:#d97706"></i> Magnet &amp; Reed Switch Activation System
+      </h3>
+      <div class="grid md:grid-cols-2 gap-8">
+        <div>
+          <p class="leading-relaxed mb-4" style="color:var(--clr-text)">
+            The key innovation: magnets are embedded in the board base at each grid cell. The laser piece and king piece each contain a reed switch. When placed on a cell, the board magnet closes the reed switch inside the piece, activating the laser diode or photoreceptor — no exposed wiring on the playing surface.
+          </p>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">
+            This replaced an earlier copper-tape contact rail design, improving safety, simplifying construction, and making the system more robust overall.
+          </p>
+        </div>
+        <div class="space-y-3">
+          <div class="p-3 rounded-lg flex items-center gap-3" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+            <i class="fas fa-magnet" style="color:var(--clr-accent)"></i>
+            <span class="text-sm" style="color:var(--clr-text)">Board magnets embedded at each grid cell</span>
+          </div>
+          <div class="p-3 rounded-lg flex items-center gap-3" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+            <i class="fas fa-toggle-on" style="color:var(--clr-accent2)"></i>
+            <span class="text-sm" style="color:var(--clr-text)">Reed switches inside laser &amp; king pieces close on placement</span>
+          </div>
+          <div class="p-3 rounded-lg flex items-center gap-3" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+            <i class="fas fa-wifi" style="color:#059669"></i>
+            <span class="text-sm" style="color:var(--clr-text)">King piece uses RF transmitter to signal hits wirelessly</span>
+          </div>
+          <div class="p-3 rounded-lg flex items-center gap-3" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)">
+            <i class="fas fa-check-circle" style="color:#059669"></i>
+            <span class="text-sm" style="color:var(--clr-text)">No exposed conductors on playing surface — child safe</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= PROTOTYPE PHOTO GALLERY (added after prototype section) ========= -->
+<section class="py-12 relative" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-camera" style="color:var(--clr-laser)"></i> Prototype Build Gallery
+      </h3>
+      <div class="photo-gallery">
+        <div class="photo-card"><img src="https://placehold.co/600x400/1e293b/3b82f6?text=Cardboard+Mockup" alt="Cardboard prototype" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">📦 Early cardboard model</p><p class="text-xs text-gray-400">Replace with your image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/0f1120/ff8800?text=Laser+Alignment" alt="Laser test" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">🔦 Beam alignment test</p><p class="text-xs text-gray-400">Replace with your image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/08090f/10b981?text=3D+Printed+Pieces" alt="3D printed pieces" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">🧩 3D printed housings</p><p class="text-xs text-gray-400">Replace with your image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/1a1c2c/ec4899?text=Reed+Switch+Test" alt="Reed switch" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">🧲 Embedded magnet system</p><p class="text-xs text-gray-400">Replace with your image</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ CAD ════════ -->
+<section id="cad" class="py-24" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">05 — CAD Design</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">SolidWorks Models</h2>
+      <p class="mt-3 max-w-xl mx-auto" style="color:var(--clr-muted)">Full assembly and individual part drawings created by each team member in SolidWorks.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-8 mb-10">
+      <div class="glass-card p-6 lg:col-span-1">
+        <h3 class="font-display font-bold text-lg mb-3 flex items-center gap-2" style="color:var(--clr-text)">
+          <i class="fas fa-layer-group" style="color:var(--clr-accent)"></i> Game Assembly
+        </h3>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-muted)">
+          Full game assembly showing the pine base with a 6×6 grid of square cutouts. Board: 12×12×1.36". Emitter piece: 1×1×1.17". King/transmitter piece: 1×1×1.37". Scale 1:4.
+        </p>
+        <div class="p-4 rounded-lg text-xs" style="background:rgba(15,17,32,0.06);border:1px solid var(--clr-border);font-family:'JetBrains Mono',monospace">
+          <p style="color:var(--clr-muted)">PARTS LIST</p>
+          <p style="color:var(--clr-accent)">1 × GAME ALL TOGETHER</p>
+          <p style="color:var(--clr-text)">1 × BASE — PLYWOOD (3-layer)</p>
+          <p style="color:var(--clr-text)">1 × GRID — LASER-CUT WOOD</p>
+          <p style="color:var(--clr-text)">1 × LASER EMITTER PIECE</p>
+          <p style="color:var(--clr-text)">1 × KING (TARGET) PIECE</p>
+          <p style="color:var(--clr-text)">N × DEFLECTOR / DIAGONAL PIECES</p>
+          <p style="color:var(--clr-text)">N × SHIELD / BARRICADE PIECES</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <h3 class="font-display font-bold text-lg mb-3 flex items-center gap-2" style="color:var(--clr-text)">
+          <i class="fas fa-ruler-combined" style="color:#d97706"></i> Laser Emitter Housing
+        </h3>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-muted)">
+          Two-part housing: top shell (1.00×1.00×0.50") and bottom cradle (1.00×1.00×0.67"). Front aperture for beam exit. Top slot for reed switch access. Emitter overall: 1×1×1.17".
+        </p>
+        <div class="rounded-xl overflow-hidden h-36 flex items-center justify-center" style="background:rgba(15,17,32,0.06);border:1px solid var(--clr-border)">
+          <div class="text-center" style="color:var(--clr-muted)">
+            <i class="fas fa-drafting-compass text-4xl mb-2 block"></i>
+            <span class="text-xs" style="font-family:'JetBrains Mono',monospace">Emitter — 1×1×1.17"</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <h3 class="font-display font-bold text-lg mb-3 flex items-center gap-2" style="color:var(--clr-text)">
+          <i class="fas fa-cube" style="color:#dc2626"></i> King (Transmitter) Housing
+        </h3>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-muted)">
+          Two-part housing similar to emitter. Front face has circular aperture for photoreceptor. Top slot for RF transmitter antenna. King overall: 1×1×1.37". Slightly taller to house RF module.
+        </p>
+        <div class="rounded-xl overflow-hidden h-36 flex items-center justify-center" style="background:rgba(15,17,32,0.06);border:1px solid var(--clr-border)">
+          <div class="text-center" style="color:var(--clr-muted)">
+            <i class="fas fa-cube text-4xl mb-2 block" style="color:rgba(220,38,38,0.4)"></i>
+            <span class="text-xs" style="font-family:'JetBrains Mono',monospace">King — 1×1×1.37"</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6" style="color:var(--clr-text)">Individual CAD Contributions</h3>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="p-5 rounded-xl" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+          <p class="section-label mb-2">Dabian</p>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-text)">Top view + small section of game board. Exploded view of the game board (3-layer system). Top view and exploded view of laser emitter housing. Top view and exploded view of king (transmitter) housing.</p>
+        </div>
+        <div class="p-5 rounded-xl" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15)">
+          <p class="section-label mb-2" style="color:var(--clr-accent2)">Jake</p>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-text)">Full assembly drawing with parts list (Scale 1:4). Individual part drawings for 90° reflector, 45° reflector (deflector), diagonal piece, shield, and barricade. Rendered isometric views.</p>
+        </div>
+        <div class="p-5 rounded-xl" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+          <p class="section-label mb-2" style="color:#d97706">Kyle</p>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-text)">Close-up top-panel CAD showing 6×6 grid cutout pattern with magnet hole positions. Separate section view showing the three-layer board stack and embedded magnet positions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= CAD PHOTO GALLERY (added after CAD section) ========= -->
+<section class="py-12 relative grid-bg">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-cube" style="color:var(--clr-accent2)"></i> CAD Renders & Drawings Gallery
+      </h3>
+      <div class="photo-gallery">
+        <div class="photo-card"><img src="https://placehold.co/600x400/334155/60a5fa?text=Full+Assembly" alt="Full assembly CAD" class="img-hover" onclick="openModal(this.src)"><div class="p-2"><p class="text-sm font-medium">🏛️ Game board assembly</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/0f172a/f97316?text=Emitter+Exploded" alt="Emitter exploded" class="img-hover" onclick="openModal(this.src)"><div class="p-2"><p class="text-sm font-medium">🔴 Laser emitter (exploded)</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/1e1b4b/a855f7?text=King+Section" alt="King section CAD" class="img-hover" onclick="openModal(this.src)"><div class="p-2"><p class="text-sm font-medium">👑 King target piece</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/2d3748/10b981?text=Mirror+Pieces" alt="Mirror pieces CAD" class="img-hover" onclick="openModal(this.src)"><div class="p-2"><p class="text-sm font-medium">🪞 Deflector, diagonal, shield</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ ELECTRONICS ════════ -->
+<section id="electronics" class="py-24 relative grid-bg">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">06 — Electronics &amp; Software</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Wiring &amp; Code</h2>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 mb-10">
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-list" style="color:#059669"></i> Bill of Materials
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="parts-table text-left">
+            <thead><tr><th class="text-left">Component</th><th>Qty</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--clr-text)">Laser Diodes</td><td>10×</td><td style="color:#dc2626;font-family:'JetBrains Mono',monospace">$6.80</td></tr>
+              <tr><td style="color:var(--clr-text)">Mirrors (50-pack)</td><td>50×</td><td style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">$7.99</td></tr>
+              <tr><td style="color:var(--clr-text)">LDR Light Sensor</td><td>2×</td><td style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">$1.98</td></tr>
+              <tr><td style="color:var(--clr-text);font-weight:600">RP2040 Pico</td><td>3×</td><td style="color:#2563eb;font-family:'JetBrains Mono',monospace">$9.99</td></tr>
+              <tr><td style="color:var(--clr-text)">RF Transmitter &amp; Receiver</td><td>5×</td><td style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">$9.99</td></tr>
+              <tr><td style="color:var(--clr-text);font-weight:600">Reed Switches</td><td>20×</td><td style="color:#7c3aed;font-family:'JetBrains Mono',monospace">$7.99</td></tr>
+              <tr><td style="color:var(--clr-text)">200mAh LiPo</td><td>4×</td><td style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">$8.99</td></tr>
+              <tr><td style="color:var(--clr-text)">3000mAh LiPo</td><td>4×</td><td style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">$19.99</td></tr>
+              <tr><td style="color:var(--clr-text)">Duty Magnets (50-pack)</td><td>50×</td><td style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">$15.99</td></tr>
+              <tr style="background:rgba(5,150,105,0.06)"><td class="font-semibold" colspan="2" style="color:#059669">Total</td><td style="color:#059669;font-family:'JetBrains Mono',monospace;font-weight:700">&lt; $100</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-microchip" style="color:var(--clr-accent)"></i> Electronics Unit
+        </h3>
+        <p class="text-sm leading-relaxed mb-5" style="color:var(--clr-text)">
+          All electronics are housed in a separate unit connected wirelessly via the king piece's RF link. Built around a Raspberry Pi Pico (RP2040) running MicroPython.
+        </p>
+        <div class="space-y-3">
+          <div class="p-3 rounded-lg" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+            <p class="text-sm font-semibold mb-1" style="color:var(--clr-text)">User Controls</p>
+            <ul class="text-xs space-y-1" style="color:var(--clr-muted)">
+              <li>• Power switch (back) — on/off</li>
+              <li>• 2 front buttons — game mode select (single / two-player)</li>
+              <li>• 2 top buttons — chess-clock style, one per player</li>
+            </ul>
+          </div>
+          <div class="p-3 rounded-lg" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15)">
+            <p class="text-sm font-semibold mb-1" style="color:var(--clr-text)">Internal Peripherals</p>
+            <ul class="text-xs space-y-1" style="color:var(--clr-muted)">
+              <li>• 16×2 I²C LCD display — all text feedback</li>
+              <li>• RF receiver module — receives hit signals from king piece</li>
+              <li>• 4 GPIO-connected user buttons</li>
+              <li>• Status LED (green = win, red = loss)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-code-branch" style="color:var(--clr-accent2)"></i> Game Logic Flowchart
+      </h3>
+      <div class="grid md:grid-cols-2 gap-8">
+        <div>
+          <p class="text-sm mb-4" style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">Single-Player Mode</p>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(59,130,246,0.06)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#2563eb;font-family:'JetBrains Mono',monospace">1</span>
+              <span style="color:var(--clr-text)">Power ON → LCD: "Welcome! Choose game mode"</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(59,130,246,0.06)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#2563eb;font-family:'JetBrains Mono',monospace">2</span>
+              <span style="color:var(--clr-text)">Mode selected → LCD: "Get Ready!" → stopwatch starts</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(59,130,246,0.06)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#2563eb;font-family:'JetBrains Mono',monospace">3</span>
+              <span style="color:var(--clr-text)">Player arranges deflectors/shields/barricades on grid</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(59,130,246,0.06)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#2563eb;font-family:'JetBrains Mono',monospace">4</span>
+              <span style="color:var(--clr-text)">Pico monitors RF receiver continuously for hit signal</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#059669;font-family:'JetBrains Mono',monospace">W</span>
+              <span style="color:var(--clr-text)">Hit registered → stopwatch stops → LED green → "You Win!"</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm mb-4" style="color:var(--clr-muted);font-family:'JetBrains Mono',monospace">Two-Player Mode</p>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(139,92,246,0.06)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#7c3aed;font-family:'JetBrains Mono',monospace">S</span>
+              <span style="color:var(--clr-text)">Each player gets: laser piece, king, symmetric piece complement</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(139,92,246,0.06)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#7c3aed;font-family:'JetBrains Mono',monospace">T</span>
+              <span style="color:var(--clr-text)">Top button = chess clock — pressing ends your turn, starts opponent's</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(139,92,246,0.06)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#7c3aed;font-family:'JetBrains Mono',monospace">P</span>
+              <span style="color:var(--clr-text)">Both lasers fire simultaneously at all times</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)">
+              <span class="w-6 h-6 rounded flex items-center justify-center text-xs text-white flex-shrink-0" style="background:#059669;font-family:'JetBrains Mono',monospace">W</span>
+              <span style="color:var(--clr-text)">Hit registered → win credited to player whose clock is running</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ FINAL ════════ -->
+<section id="final" class="py-24" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">07 — Final Design</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl">
+        <span class="laser-text">Final Prototype</span>
+      </h2>
+      <p class="mt-3 max-w-xl mx-auto" style="color:var(--clr-muted)">DOM-K — the completed laser strategy game delivered to MLA 5th graders.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+      <div class="glass-card p-6 text-center" style="border-color:rgba(5,150,105,0.3)">
+        <div class="stat-val mb-2" style="color:#059669">✓</div>
+        <h4 class="font-display font-bold mb-2" style="color:var(--clr-text)">Laser Piece</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">3D-printed housing with reed switch. Fires red beam parallel to board surface on placement.</p>
+      </div>
+      <div class="glass-card p-6 text-center" style="border-color:rgba(5,150,105,0.3)">
+        <div class="stat-val mb-2" style="color:#059669">✓</div>
+        <h4 class="font-display font-bold mb-2" style="color:var(--clr-text)">King / RF System</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">Photoreceptor + RF transmitter. Verified signal range over 100 ft. Hit detection working reliably.</p>
+      </div>
+      <div class="glass-card p-6 text-center" style="border-color:rgba(5,150,105,0.3)">
+        <div class="stat-val mb-2" style="color:#059669">✓</div>
+        <h4 class="font-display font-bold mb-2" style="color:var(--clr-text)">Electronics Unit</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">RP2040 Pico, 16×2 LCD, RF receiver, 4 buttons, chess-clock timer — both game modes functional.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 mb-12">
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-5 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-check-double" style="color:#059669"></i> Completed Milestones
+        </h3>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Market research (14 products) + KTDA decision matrix</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Full-scale cardboard prototype → scaled to 6×6 grid</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">SolidWorks CAD — all 6 piece types + board assembly</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">3-layer plywood board — solved warping problem</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Reed switch + magnet system — replaced copper tape design</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">RF wireless hit detection — 100+ ft range verified</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Both game modes functional (single + 2-player)</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">10 printed challenge cards (Card 1–10, progressive difficulty)</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">MLA 5th-grade playtesting completed — positive feedback collected</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check text-xs flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Project delivered under $100 budget</span></div>
+        </div>
+      </div>
+
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-5 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-layer-group" style="color:var(--clr-accent)"></i> Single-Player Challenge Cards
+        </h3>
+        <p class="text-sm leading-relaxed mb-5" style="color:var(--clr-text)">
+          Single-player mode uses a deck of 10 printed challenge cards following the ThinkFun format. Each card has two sides:
+        </p>
+        <div class="space-y-3">
+          <div class="p-3 rounded-lg" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+            <p class="text-sm font-semibold mb-1" style="color:var(--clr-text)">PROBLEM Side</p>
+            <p class="text-xs" style="color:var(--clr-muted)">Shows 6×6 board diagram with pre-placed pieces. Pieces needing orientation solved are marked "?". ADD TO GRID sidebar lists deflectors the player must place.</p>
+          </div>
+          <div class="p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.15)">
+            <p class="text-sm font-semibold mb-1" style="color:var(--clr-text)">SOLUTION Side</p>
+            <p class="text-xs" style="color:var(--clr-muted)">Shows complete piece layout with beam path drawn. Placed deflectors marked with dashed green borders.</p>
+          </div>
+          <div class="p-3 rounded-lg" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+            <p class="text-sm font-semibold mb-1" style="color:var(--clr-text)">Difficulty Progression</p>
+            <p class="text-xs" style="color:var(--clr-muted)">Card 1: single deflector. Card 10: eight deflectors, shields, barricades, and multi-bounce beam paths.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-5 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-comment-dots" style="color:#dc2626"></i> MLA Student Feedback
+      </h3>
+      <p class="text-sm mb-6" style="color:var(--clr-muted)">DOM-K was tested with MLA 5th-grade students in 15-minute intervals. Students played freely after a brief rule explanation, then left written feedback on sticky notes.</p>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="quote-card"><p class="text-sm" style="color:var(--clr-text)">"Best game ever, super fun!!!"</p></div>
+        <div class="quote-card"><p class="text-sm" style="color:var(--clr-text)">"Best of all! It seems so much like the real laser maze with the laser and the fog. 10 stars, two thumbs, and 100% awesome."</p></div>
+        <div class="quote-card"><p class="text-sm" style="color:var(--clr-text)">"So awesome I had to use my brain, there were different levels. Perfect."</p></div>
+        <div class="quote-card"><p class="text-sm" style="color:var(--clr-text)">"I really liked it because there are different levels and you work together to solve it."</p></div>
+        <div class="quote-card"><p class="text-sm" style="color:var(--clr-text)">"This game was very fun but 2-player is confusing."</p></div>
+        <div class="quote-card"><p class="text-sm" style="color:var(--clr-text)">"Very fun set-up too. You should make a bigger maze to make this harder."</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= FINAL PROTOTYPE PHOTO GALLERY (added after final section) ========= -->
+<section class="py-12 relative" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-microchip" style="color:#10b981"></i> DOM‑K Final Build — High-Resolution Shots
+      </h3>
+      <div class="photo-gallery">
+        <div class="photo-card"><img src="https://placehold.co/600x400/1e293b/f97316?text=Final+Board+Top" alt="Final board" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">🎯 6×6 Playing surface</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/0f172a/ef4444?text=Pieces+Placed" alt="Pieces on board" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">⚡ Laser & King active</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/1a2c3e/3b82f6?text=Electronics+Box" alt="Electronics unit" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">📟 Pico control box</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+        <div class="photo-card"><img src="https://placehold.co/600x400/2d2a4e/ec4899?text=MLA+Kids+Playtest" alt="MLA playtest" class="img-hover" onclick="openModal(this.src)"><div class="p-3"><p class="text-sm font-semibold">🧒 Student testing session</p><p class="text-xs text-gray-400">Replace image</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ RESULTS ════════ -->
+<section id="results" class="py-24 relative grid-bg">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">08 — Results</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Testing Outcomes</h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-10">
+      <div class="glass-card p-6 text-center" style="border-color:rgba(5,150,105,0.3)">
+        <div class="stat-val mb-2" style="color:#059669">95%</div>
+        <h4 class="font-display font-bold mb-1" style="color:var(--clr-text)">Success Rate</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">Based on ~50 end-to-end tests. The game worked as intended the vast majority of the time.</p>
+      </div>
+      <div class="glass-card p-6 text-center" style="border-color:rgba(37,99,235,0.3)">
+        <div class="stat-val mb-2" style="color:#2563eb">100 ft</div>
+        <h4 class="font-display font-bold mb-1" style="color:var(--clr-text)">RF Signal Range</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">Tested through walls and to the field behind the classroom — far beyond in-game requirements.</p>
+      </div>
+      <div class="glass-card p-6 text-center" style="border-color:rgba(217,119,6,0.3)">
+        <div class="stat-val mb-2" style="color:#d97706">~50</div>
+        <h4 class="font-display font-bold mb-1" style="color:var(--clr-text)">Test Runs</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">Full start-to-finish playthroughs conducted by the team and MLA students.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 mb-10">
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-5 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-thumbs-up" style="color:#059669"></i> What Worked Well
+        </h3>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Both single-player and two-player modes functioned as designed throughout testing.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">RF signal range exceeded 100 feet — far beyond what the game needed.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Parts powered on automatically without switches — students noticed and were impressed.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">Students stayed engaged trying to align the laser and hit the receiver.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2)"><i class="fas fa-check mt-0.5 flex-shrink-0" style="color:#059669"></i><span class="text-sm" style="color:var(--clr-text)">After a short explanation, most students corrected mistakes and played successfully.</span></div>
+        </div>
+      </div>
+
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-5 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-exclamation-circle" style="color:#d97706"></i> Issues Identified
+        </h3>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(217,119,6,0.06);border:1px solid rgba(217,119,6,0.2)"><i class="fas fa-circle text-xs mt-1 flex-shrink-0" style="color:#d97706"></i><span class="text-sm" style="color:var(--clr-text)">Occasional RF communication failure or receiver not powering on — not in students' control.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(217,119,6,0.06);border:1px solid rgba(217,119,6,0.2)"><i class="fas fa-circle text-xs mt-1 flex-shrink-0" style="color:#d97706"></i><span class="text-sm" style="color:var(--clr-text)">Students frequently misplaced pieces so the laser missed the receiver — user error, not electronics.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(217,119,6,0.06);border:1px solid rgba(217,119,6,0.2)"><i class="fas fa-circle text-xs mt-1 flex-shrink-0" style="color:#d97706"></i><span class="text-sm" style="color:var(--clr-text)">Some students started playing before fully understanding setup.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(217,119,6,0.06);border:1px solid rgba(217,119,6,0.2)"><i class="fas fa-circle text-xs mt-1 flex-shrink-0" style="color:#d97706"></i><span class="text-sm" style="color:var(--clr-text)">Many students forgot to press "Start" — LCD screen was not a natural first interaction.</span></div>
+          <div class="flex items-start gap-3 p-3 rounded-lg" style="background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.2)"><i class="fas fa-circle text-xs mt-1 flex-shrink-0" style="color:#dc2626"></i><span class="text-sm" style="color:var(--clr-text)">One student specifically identified two-player mode as confusing.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-8">
+      <h3 class="font-display font-bold text-xl mb-6 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-table" style="color:var(--clr-accent2)"></i> Student Testing Observations
+      </h3>
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th class="text-left">Observation Area</th><th class="text-left">Observation</th><th class="text-left">What It Showed</th></tr></thead>
+          <tbody>
+            <tr><td class="text-left" style="color:var(--clr-text)">Game setup</td><td class="text-left text-sm" style="color:var(--clr-muted)">Students started playing before fully understanding how the game began.</td><td class="text-left text-sm" style="color:var(--clr-muted)">The game caught their attention right away, but setup wasn't always clear.</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Screen use</td><td class="text-left text-sm" style="color:var(--clr-muted)">Many students forgot to use the screen and only watched the board.</td><td class="text-left text-sm" style="color:var(--clr-muted)">The LCD screen was not a natural part of gameplay for first-time users.</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Part placement</td><td class="text-left text-sm" style="color:var(--clr-muted)">Students often misplaced pieces, causing the laser to miss the receiver.</td><td class="text-left text-sm" style="color:var(--clr-muted)">Many failed trials came from user error, not electronics.</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Pressing start</td><td class="text-left text-sm" style="color:var(--clr-muted)">Some students forgot to press Start before trying to play.</td><td class="text-left text-sm" style="color:var(--clr-muted)">The order of steps was not always obvious.</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Response after help</td><td class="text-left text-sm" style="color:var(--clr-muted)">After a short explanation, most students fixed mistakes and played successfully.</td><td class="text-left text-sm" style="color:var(--clr-muted)">Most user errors were easy to correct once the game was explained.</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Automatic power-on</td><td class="text-left text-sm" style="color:var(--clr-muted)">Students noticed parts turned on without switches and seemed impressed.</td><td class="text-left text-sm" style="color:var(--clr-muted)">Made the system feel easier to use and more polished.</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Engagement</td><td class="text-left text-sm" style="color:var(--clr-muted)">Students stayed interested while trying to line up the laser and hit the receiver.</td><td class="text-left text-sm" style="color:var(--clr-muted)">The game idea held attention and gave clear visual feedback.</td></tr>
+            <tr><td class="text-left" style="color:var(--clr-text)">Communication issues</td><td class="text-left text-sm" style="color:var(--clr-muted)">A small number of trials failed due to RF communication errors or receiver not powering on.</td><td class="text-left text-sm" style="color:var(--clr-muted)">The main technical weakness was communication between parts.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ DISCUSSION ════════ -->
+<section id="discussion" class="py-24" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">09 — Discussion &amp; Analysis</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Design Evaluation</h2>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 mb-10">
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-layer-group" style="color:var(--clr-accent)"></i> Board Flatness Challenge
+        </h3>
+        <p class="leading-relaxed mb-4" style="color:var(--clr-text)">Board flatness was one of the most critical design constraints — even a small angular deviation would cause the laser beam to miss its intended path. Early prototypes suffered from warping, making the laser unreliable.</p>
+        <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">The solution came from rethinking the board as a three-layer system: thick plywood at the base (chosen for straightness), a 3D-printed middle layer housing the embedded magnets, and a thin painted plywood top as the decorative playing surface.</p>
+      </div>
+
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-exchange-alt" style="color:var(--clr-accent2)"></i> Key Design Pivot: Copper → Magnets
+        </h3>
+        <p class="leading-relaxed mb-4" style="color:var(--clr-text)">The original plan used copper wires in the board to transfer power and data. This introduced safety and reliability concerns — exposed electrical contacts on a toy for young children posed a clear risk.</p>
+        <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">Switching to reed switches and embedded magnets eliminated all exposed conductors on the playing surface. Wireless RF communication handled the rest, improving safety, simplifying construction, and making the system more robust.</p>
+      </div>
+
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-shield-alt" style="color:#059669"></i> Safety Evaluation
+        </h3>
+        <p class="leading-relaxed mb-4" style="color:var(--clr-text)">Safety was a primary constraint given the target age group (5–10). The shift from copper wires removed all exposed electrical contacts. The layered board construction kept all internal components enclosed. Pieces were designed with no sharp edges.</p>
+        <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">Minor areas worth noting: ensuring laser power level is formally certified appropriate for young users, and confirming pieces are durable enough for rough handling.</p>
+      </div>
+
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+          <i class="fas fa-vials" style="color:#d97706"></i> Component-Level Testing
+        </h3>
+        <p class="leading-relaxed mb-4" style="color:var(--clr-text)">Component-level testing proved essential. The team tested each subsystem independently before integration: wireless transmission, laser straightness, magnet fitment, laser housing fitment, and piece fitment into the board.</p>
+        <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">The LCD screen failed spontaneously during integration, reinforcing the importance of testing displays independently before full assembly.</p>
+      </div>
+    </div>
+
+    <div class="glass-card p-8" style="border-color:rgba(5,150,105,0.25)">
+      <h3 class="font-display font-bold text-xl mb-4 flex items-center gap-3" style="color:var(--clr-text)">
+        <i class="fas fa-check-circle" style="color:#059669"></i> Overall Assessment
+      </h3>
+      <p class="leading-relaxed mb-4" style="color:var(--clr-text)">The prototype demonstrated that the concept works. Both competitive and puzzle modes are playable, the wireless system functions, the timer box tracks gameplay accurately, and the board maintains the flatness needed for reliable laser travel. The project came in under $100, meeting the cost constraint.</p>
+      <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">The core gameplay experience worked as designed, and the prototype successfully demonstrated a laser-based strategy game that is both engaging and safe for its intended users.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ CONCLUSION ════════ -->
+<section id="conclusion" class="py-24 relative grid-bg">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">10 — Conclusion</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Summary</h2>
+    </div>
+
+    <div class="glass-card p-10 mb-10" style="border-color:rgba(220,38,38,0.25)">
+      <div class="flex items-start gap-5">
+        <div class="w-14 h-14 rounded-xl flex-shrink-0 flex items-center justify-center pulse-glow" style="background:linear-gradient(135deg,#ff3a3a,#ff8800)">
+          <i class="fas fa-flag-checkered text-white text-xl"></i>
+        </div>
+        <div>
+          <h3 class="font-display font-bold text-2xl mb-4" style="color:var(--clr-text)">DOM-K: Mission Accomplished</h3>
+          <p class="leading-relaxed mb-4" style="color:var(--clr-text)">The final design is a two-player laser strategy game targeted at children ages 5 to 10. Each player moves pieces and adjusts mirrors on a shared 6×6 board, attempting to redirect their laser to hit the opponent's king piece. The electronics unit detects hits, tracks per-player chess-clock time, and handles both game modes wirelessly.</p>
+          <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-muted)">The design met the majority of established goals and constraints. The budget was met, and the final product functioned as intended during testing. The shift from exposed copper wires to magnetic reed switches directly addressed the primary safety concern.</p>
+          <p class="text-sm leading-relaxed" style="color:var(--clr-muted)">Despite challenges with laser housing alignment and board warping — both addressed iteratively — the core gameplay experience worked as designed.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="glass-card p-6 text-center" style="border-color:rgba(5,150,105,0.3)">
+        <i class="fas fa-dollar-sign text-3xl mb-3 block" style="color:#059669"></i>
+        <h4 class="font-display font-bold mb-2" style="color:var(--clr-text)">Under $100</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">Project came in within the team budget. Majority of components sourced from SparkFun kit or borrowed from the makerspace.</p>
+      </div>
+      <div class="glass-card p-6 text-center" style="border-color:rgba(37,99,235,0.3)">
+        <i class="fas fa-gamepad text-3xl mb-3 block" style="color:#2563eb"></i>
+        <h4 class="font-display font-bold mb-2" style="color:var(--clr-text)">Both Modes Delivered</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">Single-player puzzle mode with 10 challenge cards, and two-player competitive mode with chess-clock timing.</p>
+      </div>
+      <div class="glass-card p-6 text-center" style="border-color:rgba(217,119,6,0.3)">
+        <i class="fas fa-child text-3xl mb-3 block" style="color:#d97706"></i>
+        <h4 class="font-display font-bold mb-2" style="color:var(--clr-text)">Kids Loved It</h4>
+        <p class="text-sm" style="color:var(--clr-muted)">MLA 5th graders responded overwhelmingly positively. Clear visual feedback and automatic activation made the game immediately intuitive.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ RECOMMENDATIONS ════════ -->
+<section id="recommendations" class="py-24" style="background:var(--clr-surface)">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">11 — Recommendations</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Next Steps for DOM-K</h2>
+      <p class="mt-3 max-w-xl mx-auto" style="color:var(--clr-muted)">Four priority recommendations for the next stage of development or future teams working on a similar system.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8">
+      <div class="glass-card p-8" style="border-color:rgba(220,38,38,0.25)">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-display font-bold" style="background:linear-gradient(135deg,#ff3a3a,#ff8800)">1</div>
+          <h3 class="font-display font-bold text-lg" style="color:var(--clr-text)">Expand &amp; Formalize Student Playtesting</h3>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-text)">The MLA campus testing session was a strong start, but future evaluation should be longer and more structured.</p>
+        <ul class="space-y-2 text-sm" style="color:var(--clr-muted)">
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#dc2626"></i>Implement a formal pre/post concept check</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#dc2626"></i>Timed setup and play observations</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#dc2626"></i>Collect feedback in both English and Spanish to reach all MLA students</li>
+        </ul>
+      </div>
+
+      <div class="glass-card p-8" style="border-color:rgba(124,58,237,0.25)">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-display font-bold" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">2</div>
+          <h3 class="font-display font-bold text-lg" style="color:var(--clr-text)">Simplify Two-Player Mode</h3>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-text)">Student feedback specifically identified two-player mode as confusing for the target age group.</p>
+        <ul class="space-y-2 text-sm" style="color:var(--clr-muted)">
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#7c3aed"></i>Revise two-player instruction card with clearer step-by-step layout</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#7c3aed"></i>Add visual diagrams showing board setup for each player</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#7c3aed"></i>Consider color-coding player sides more prominently</li>
+        </ul>
+      </div>
+
+      <div class="glass-card p-8" style="border-color:rgba(37,99,235,0.25)">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-display font-bold" style="background:linear-gradient(135deg,#3b82f6,#06b6d4)">3</div>
+          <h3 class="font-display font-bold text-lg" style="color:var(--clr-text)">Expand Challenge Card Deck &amp; Difficulty</h3>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-text)">One student explicitly requested a bigger maze — the current difficulty ceiling is not high enough for all players.</p>
+        <ul class="space-y-2 text-sm" style="color:var(--clr-muted)">
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#2563eb"></i>Production version requires minimum 30 laminated cards</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#2563eb"></i>Span beginner, intermediate, and expert difficulty tiers</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#2563eb"></i>More complex configurations: longer beam paths, more pieces, tighter angles</li>
+        </ul>
+      </div>
+
+      <div class="glass-card p-8" style="border-color:rgba(5,150,105,0.25)">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-display font-bold" style="background:linear-gradient(135deg,#10b981,#3b82f6)">4</div>
+          <h3 class="font-display font-bold text-lg" style="color:var(--clr-text)">Implement Automatic Game Reset</h3>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--clr-text)">Currently the player must press a button to restart after each round, requiring adult involvement in a classroom setting.</p>
+        <ul class="space-y-2 text-sm" style="color:var(--clr-muted)">
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#059669"></i>Add automatic reset approximately 5 seconds after win/loss screen</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#059669"></i>Allows students to move directly into next attempt without help</li>
+          <li class="flex items-start gap-2"><i class="fas fa-arrow-right mt-0.5 flex-shrink-0" style="color:#059669"></i>Substantially improves pace during 15-minute classroom sessions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= DEDICATED PROJECT PHOTO GALLERY (after recommendations) ========= -->
+<section id="photogallery" class="py-24 relative grid-bg">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <div class="text-center mb-16">
+      <div class="section-label mb-3">📸 Visual Archive</div>
+      <h2 class="font-display font-extrabold text-4xl md:text-5xl gradient-text">Project Photo Gallery</h2>
+      <p class="mt-3 max-w-xl mx-auto" style="color:var(--clr-muted)">Additional spaces for CAD renders, assembly steps, classroom testing, and team documentation.</p>
+    </div>
+    <div class="photo-gallery">
+      <div class="glass-card overflow-hidden p-0">
+        <img src="https://placehold.co/600x400/111827/3b82f6?text=Team+Work+Session" alt="Team work" class="img-hover w-full h-64 object-cover" onclick="openModal(this.src)">
+        <div class="p-4"><h4 class="font-bold">Collaborative build</h4><p class="text-sm text-gray-400">Assembling 3D‑printed housings.</p><span class="text-xs italic text-gray-500">Replace image</span></div>
+      </div>
+      <div class="glass-card overflow-hidden p-0">
+        <img src="https://placehold.co/600x400/0a0f1f/ff3a3a?text=Laser+Path+Test" alt="Laser path" class="img-hover w-full h-64 object-cover" onclick="openModal(this.src)">
+        <div class="p-4"><h4 class="font-bold">Beam reflection test</h4><p class="text-sm text-gray-400">Verifying 45° mirror deflection.</p></div>
+      </div>
+      <div class="glass-card overflow-hidden p-0">
+        <img src="https://placehold.co/600x400/1e1e3f/8b5cf6?text=RF+Module+Closeup" alt="RF module" class="img-hover w-full h-64 object-cover" onclick="openModal(this.src)">
+        <div class="p-4"><h4 class="font-bold">Wireless communication</h4><p class="text-sm text-gray-400">RF transmitter inside king piece.</p></div>
+      </div>
+      <div class="glass-card overflow-hidden p-0">
+        <img src="https://placehold.co/600x400/16213e/f59e0b?text=Challenge+Cards+Set" alt="Challenge cards" class="img-hover w-full h-64 object-cover" onclick="openModal(this.src)">
+        <div class="p-4"><h4 class="font-bold">Puzzle cards (set of 10)</h4><p class="text-sm text-gray-400">Progressive difficulty levels.</p></div>
+      </div>
+      <div class="glass-card overflow-hidden p-0">
+        <img src="https://placehold.co/600x400/0b0e1a/06b6d4?text=Wiring+Internal+Unit" alt="Internal wiring" class="img-hover w-full h-64 object-cover" onclick="openModal(this.src)">
+        <div class="p-4"><h4 class="font-bold">Electronics enclosure</h4><p class="text-sm text-gray-400">RP2040 Pico, LCD, battery management.</p></div>
+      </div>
+      <div class="glass-card overflow-hidden p-0">
+        <img src="https://placehold.co/600x400/2c2a4a/ec4899?text=MLA+Classroom+Play" alt="MLA playtest" class="img-hover w-full h-64 object-cover" onclick="openModal(this.src)">
+        <div class="p-4"><h4 class="font-bold">Fifth graders playing DOM-K</h4><p class="text-sm text-gray-400">Real‑world feedback & engagement.</p></div>
+      </div>
+    </div>
+    <div class="text-center mt-8 p-4 glass-card"><p class="text-sm"><i class="fas fa-upload mr-2"></i> To replace any photo: edit the <code class="bg-black/20 px-1 rounded">src</code> attribute with your own image URL. All images support click‑to‑enlarge.</p></div>
+  </div>
+</section>
+
+<!-- Enhanced Footer (Laser Chess/Maze Edition) -->
+<footer class="relative overflow-hidden" style="border-top:1px solid var(--clr-border); background:var(--clr-surface)">
+  <!-- Subtle gradient overlay that adapts to theme (optional, keeps compatibility) -->
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/5 dark:to-white/5 pointer-events-none"></div>
+  
+  <div class="container mx-auto px-6 py-12 relative z-10">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid lg:grid-cols-3 gap-12 mb-12">
+        
+        <!-- Brand Section -->
+        <div>
+          <div class="flex items-center space-x-4 mb-6">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style="background:linear-gradient(135deg, var(--clr-laser), var(--clr-laser2))">
+              <i class="fas fa-crosshairs text-white text-xl"></i>
+            </div>
+             <div>
+                                <a href="https://dabian-t-r.github.io/Portfolio.Main/" 
+                                class="text-2xl font-black text-gray-200 hover:text-white transition-colors">
+                                    Engineering
+                                </a>
+                                <a href="https://dabian-t-r.github.io/Portfolio.Main/" 
+                                class="text-2xl font-black gradient-text">
+                                    Portfolio
+                                </a>
+                            </div>
+          </div>
+          <p class="text-sm" style="color:var(--clr-muted)">GE 1502 Engineering Design · Cornerstone 2</p>
+          <p class="text-xs mt-1" style="color:var(--clr-muted)">Melrose Leadership Academy · Spring 2026</p>
+          <p class="text-gray-400 text-sm mt-4" style="color:var(--clr-muted)">
+            Last updated: <span id="lastEdited" class="font-bold" style="color:var(--clr-accent)"></span>
+          </p>
+        </div>
+        
+        <!-- Project Sections (matches the page’s actual section IDs) -->
+        <div>
+          <h4 class="text-lg font-bold mb-6" style="color:var(--clr-text)">Project Sections</h4>
+          <ul class="space-y-3">
+            <li><a href="#home" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Home</a></li>
+            <li><a href="#overview" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Overview</a></li>
+            <li><a href="#research" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Research</a></li>
+            <li><a href="#ideation" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Ideation</a></li>
+            <li><a href="#prototype" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Prototype</a></li>
+            <li><a href="#cad" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>CAD</a></li>
+            <li><a href="#electronics" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Electronics</a></li>
+            <li><a href="#final" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Final Design</a></li>
+            <li><a href="#results" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Results</a></li>
+            <li><a href="#discussion" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Discussion</a></li>
+            <li><a href="#recommendations" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Recommendations</a></li>
+            <li><a href="#photogallery" class="flex items-center group transition-colors duration-300" style="color:var(--clr-muted)" onmouseover="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-accent')" onmouseout="this.style.color=getComputedStyle(document.documentElement).getPropertyValue('--clr-muted')"><i class="fas fa-chevron-right text-xs mr-3 group-hover:translate-x-2 transition-transform duration-300"></i>Gallery</a></li>
+          </ul>
+        </div>
+        
+        <!-- Technologies & Team -->
+        <div>
+          <h4 class="text-lg font-bold mb-6" style="color:var(--clr-text)">Technologies Used</h4>
+          <div class="flex flex-wrap gap-1">
+          <span class="tag" style="border-color:rgba(220,38,38,0.3);color:#dc2626;font-size:0.6rem">RP2040 / Pico</span>
+          <span class="tag" style="border-color:rgba(37,99,235,0.3);color:#2563eb;font-size:0.6rem">SolidWorks</span>
+          <span class="tag" style="border-color:rgba(124,58,237,0.3);color:#7c3aed;font-size:0.6rem">Reed Switches</span>
+          <span class="tag" style="border-color:rgba(5,150,105,0.3);color:#059669;font-size:0.6rem">3D Printing</span>
+          <span class="tag" style="border-color:rgba(217,119,6,0.3);color:#d97706;font-size:0.6rem">Laser Cutting</span>
+          <span class="tag" style="border-color:rgba(219,39,119,0.3);color:#db2777;font-size:0.6rem">MicroPython</span>
+          <span class="tag" style="border-color:rgba(220,38,38,0.3);color:#dc2626;font-size:0.6rem">RF Wireless</span>
+        </div>
+          
+          <h4 class="text-lg font-bold mb-6" style="color:var(--clr-text)">Team Members</h4>
+          <div class="space-y-1 text-xs" style="color:var(--clr-muted); font-family:'JetBrains Mono',monospace">
+          <p>Dabian Taborda Restrepo</p>
+          <p>Jake Dimov</p>
+          <p>Kyle Morley</p>
+          <p>Micah Fernandez</p>
+          <p>Owen Chickering</p>
+        </div>
+        </div>
+      </div>
+      
+      <!-- Copyright Line -->
+      <!-- Copyright -->
+                <div class="border-t border-gray-800 pt-8 text-center">
+                    <p class="text-gray-400">
+                        © 2025 Dabian Taborda Restrepo - Engineering Portfolio. This portfolio documents academic and personal engineering projects.
+                    </p>
+                </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Image Modal -->
+<div id="imgModal" onclick="this.classList.remove('open')">
+  <span class="absolute top-6 right-8 text-white text-3xl cursor-pointer" onclick="event.stopPropagation();document.getElementById('imgModal').classList.remove('open')">&times;</span>
+  <img id="modalImg" src="" alt="">
+</div>
+
+<!-- ═══════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════ -->
+<!-- Small script to update the "last updated" date -->
+<script>
+  (function() {
+    const dateSpan = document.getElementById('lastEdited');
+    if (dateSpan) {
+      const now = new Date();
+      const formatted = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      dateSpan.textContent = formatted;
+    }
+  })();
+</script>
+<script>
+  // ── THEME TOGGLE (ported from Interactive Game Project) ──────────────────
+  (function() {
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    const sunIcon  = btn.querySelector('.dark-icon');
+    const moonIcon = btn.querySelector('.light-icon');
+
+    // Apply saved preference or default to dark
+    const saved = localStorage.getItem('lc-theme');
+    if (saved === 'light') {
+      html.classList.remove('dark');
+    } else {
+      html.classList.add('dark');
+    }
+
+    function syncIcons() {
+      const isDark = html.classList.contains('dark');
+      sunIcon.style.display  = isDark ? 'block' : 'none';
+      moonIcon.style.display = isDark ? 'none'  : 'block';
+    }
+
+    syncIcons();
+
+    btn.addEventListener('click', function() {
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        localStorage.setItem('lc-theme', 'light');
+      } else {
+        html.classList.add('dark');
+        localStorage.setItem('lc-theme', 'dark');
+      }
+      syncIcons();
+    });
+  })();
+
+  // ── PARTICLES ──────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof particlesJS !== 'undefined') {
+      particlesJS('particles-js', {
+        particles: {
+          number: { value: 60, density: { enable: true, value_area: 900 } },
+          color: { value: ['#3b82f6', '#ff3a3a', '#8b5cf6'] },
+          shape: { type: 'circle' },
+          opacity: { value: 0.4, random: true },
+          size: { value: 2, random: true },
+          line_linked: { enable: true, distance: 140, color: '#3b82f6', opacity: 0.12, width: 1 },
+          move: { enable: true, speed: 1.2, direction: 'none', random: true, straight: false, out_mode: 'out', bounce: false }
+        },
+        interactivity: {
+          detect_on: 'canvas',
+          events: { onhover: { enable: true, mode: 'repulse' }, onclick: { enable: true, mode: 'push' } }
+        },
+        retina_detect: true
+      });
+    }
+
+    // ── MOBILE NAV close on link click ──
+    document.querySelectorAll('#mobileNav a').forEach(a => {
+      a.addEventListener('click', () => document.getElementById('mobileNav').classList.add('hidden'));
+    });
+  });
+
+  // ── IMAGE MODAL ──────────────────────────────────────────────────────────
+  function openModal(src) {
+    document.getElementById('modalImg').src = src;
+    document.getElementById('imgModal').classList.add('open');
+  }
+</script>
+</body>
+</html>
